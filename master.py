@@ -37,52 +37,78 @@ class MasterService(rpyc.Service):
     block_size = 0
     replication_factor = 0
 
-    def exposed_read(self,fname):
-      mapping = self.__class__.file_table[fname]
-      return mapping
+    def exposed_read(self, fname):
+        mapping = self.__class__.file_table[fname]
+        return mapping
+      
+    def exposed_change_filepath(self, old_path, new_path):
+#        dictionary[new_key] = dictionary.pop(old_key)
+        
+        self.__class__.file_table[new_path] = self.__class__.file_table.pop(old_path)
+#        mapping =
+#        return mapping
 
-    def exposed_write(self,dest,size):
-      if self.exists(dest):
-        pass # ignoring for now, will delete it later
+    def exposed_write(self, dest, size):
+        if self.exists(dest):
+            pass # ignoring for now, will delete it later
+        
+        self.__class__.file_table[dest]=[]
 
-      self.__class__.file_table[dest]=[]
+        num_blocks = self.calc_num_blocks(size)
+        blocks = self.alloc_blocks(dest,num_blocks)
+        return blocks
+    
+    def exposed_delete_file(self, file_path):
+        file_table = self.__class__.file_table[file_path]
+        
+        for block in file_table:
+            for m in [self.exposed_get_minions()[_] for _ in block[1]]:
+              data = self.delete_block(block[0], m)
+              if data:
+                f.write(data)
+                
+        del self.__class__.file_table[file_path]
+        
+                
+    def delete_block(self, block_uuid, minion):
+        host, port = minion
+        con = rpyc.connect(host, port = port)
+        minion = con.root.Minion()
+        
+        minion.delete_block(block_uuid)
 
-      num_blocks = self.calc_num_blocks(size)
-      blocks = self.alloc_blocks(dest,num_blocks)
-      return blocks
-
-    def exposed_get_file_table_entry(self,fname):
-      if fname in self.__class__.file_table:
-        return self.__class__.file_table[fname]
-      else:
-        return None
+    def exposed_get_file_table_entry(self, fname):
+        if fname in self.__class__.file_table:
+            return self.__class__.file_table[fname]
+        else:
+            return None
 
     def exposed_get_block_size(self):
-      return self.__class__.block_size
+        return self.__class__.block_size
 
     def exposed_get_minions(self):
-      return self.__class__.minions
+        return self.__class__.minions
 
     def calc_num_blocks(self,size):
-      return int(math.ceil(float(size)/self.__class__.block_size))
+        return int(math.ceil(float(size)/self.__class__.block_size))
 
     def exists(self,file):
-      return file in self.__class__.file_table
+        return file in self.__class__.file_table
 
-    def alloc_blocks(self,dest,num):
-      blocks = []
-      for i in range(0,num):
-        block_uuid = uuid.uuid1()
-        nodes_ids = random.sample(self.__class__.minions.keys(),self.__class__.replication_factor)
-        blocks.append((block_uuid,nodes_ids))
+    def alloc_blocks(self, dest, num):
+        blocks = []
+        for i in range(0,num):
+            block_uuid = uuid.uuid1()
+            nodes_ids = random.sample(self.__class__.minions.keys(),self.__class__.replication_factor)
+            blocks.append((block_uuid,nodes_ids))
 
-        self.__class__.file_table[dest].append((block_uuid,nodes_ids))
+            self.__class__.file_table[dest].append((block_uuid,nodes_ids))
 
-      return blocks
+        return blocks
 
 
 if __name__ == "__main__":
-  set_conf()
-  signal.signal(signal.SIGINT,int_handler)
-  t = ThreadedServer(MasterService, port = 2131)
-  t.start()
+    set_conf()
+    signal.signal(signal.SIGINT,int_handler)
+    t = ThreadedServer(MasterService, port = 2131)
+    t.start()

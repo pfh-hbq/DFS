@@ -7,14 +7,14 @@ logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
 def send_to_minion(block_uuid,data,minions):
-  LOG.info("sending: " + str(block_uuid) + str(minions))
-  minion=minions[0]
-  minions=minions[1:]
-  host,port=minion
+    LOG.info("sending: " + str(block_uuid) + str(minions))
+    minion=minions[0]
+    minions=minions[1:]
+    host,port=minion
 
-  con=rpyc.connect(host,port=port)
-  minion = con.root.Minion()
-  minion.put(block_uuid,data,minions)
+    con=rpyc.connect(host,port=port)
+    minion = con.root.Minion()
+    minion.put(block_uuid,data,minions)
 
 
 def read_from_minion(block_uuid,minion):
@@ -23,10 +23,10 @@ def read_from_minion(block_uuid,minion):
   minion = con.root.Minion()
   return minion.get(block_uuid)
 
-def get(master,fname):
+def get(master, fname):
   name, extension = fname.split('.')
   
-  file_table = master.get_file_table_entry(name)
+  file_table = master.get_file_table_entry(fname)
   if not file_table:
     LOG.info("404: file not found")
     return
@@ -39,14 +39,18 @@ def get(master,fname):
       data = read_from_minion(block[0], m)
       if data:
         f.write(data)
-        
-        
-        print("Get data from HDFS")
-#        sys.stdout.write(data)
         break
     else:
         LOG.info("No blocks found. Possibly a corrupt file")
   f.close()
+  
+#  Change file name/move file
+
+def rename_move(master, old_path, new_path):
+    master.change_filepath(old_path, new_path)
+
+def delete_file(master, file_path):
+    master.delete_file(file_path)
 
 def get_new_filename(name, extension):
     try:
@@ -67,28 +71,42 @@ def get_new_filename(name, extension):
         f.close()
         return name + "." + extension
     
-def put(master,source,dest):
-  size = os.path.getsize(source)
-  blocks = master.write(dest,size)
-  with open(source, 'rb') as f:
-    for b in blocks:
-      data = f.read(master.get_block_size())
-      block_uuid=b[0]
-      minions = [master.get_minions()[_] for _ in b[1]]
-      send_to_minion(block_uuid,data,minions)
+#def put(master, source, dest):
+#  size = os.path.getsize(source)
+#  blocks = master.write(dest,size)
+#  with open(source, 'rb') as f:
+#    for b in blocks:
+#      data = f.read(master.get_block_size())
+#      block_uuid=b[0]
+#      minions = [master.get_minions()[_] for _ in b[1]]
+#      send_to_minion(block_uuid,data,minions)
 
+def put(master, source):
+    size = os.path.getsize(source)
+    blocks = master.write(source,size)
+    with open(source, 'rb') as f:
+      for b in blocks:
+        data = f.read(master.get_block_size())
+        block_uuid=b[0]
+        minions = [master.get_minions()[_] for _ in b[1]]
+        send_to_minion(block_uuid,data,minions)
 
 def main(args):
-  con=rpyc.connect("localhost",port=2131)
-  master=con.root.Master()
+    con=rpyc.connect("localhost",port=2131)
+    master=con.root.Master()
   
-  if args[0] == "get":
-    get(master,args[1])
-  elif args[0] == "put":
-    put(master,args[1],args[2])
-  else:
-    LOG.error("try 'put srcFile destFile OR get file'")
+    if args[0] == "get":
+        get(master,args[1])
+    elif args[0] == "put":
+#        put(master,args[1],args[2])
+        put(master,args[1])
+    elif args[0] == "rename" or args[0] == "move":
+        rename_move(master, args[1], args[2])
+    elif args[0] == "delete":
+        delete_file(master, args[1])
+    else:
+        LOG.error("try 'put srcFile destFile OR get file'")
 
 
 if __name__ == "__main__":
-  main(sys.argv[1:])
+    main(sys.argv[1:])

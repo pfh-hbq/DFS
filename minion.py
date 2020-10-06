@@ -31,19 +31,20 @@ class MinionService(rpyc.Service):
       with open(block_addr, 'rb') as f:
         return f.read()   
  
-    def forward(self,block_uuid,data,minions):
-      print("8888: forwaring to:")
+    def forward(self, block_uuid, data, minions):
+      print("forwaring to:")
       print(block_uuid, minions)
-      minion=minions[0]
-      minions=minions[1:]
-      host,port=minion
+      minion = minions[0]
+      minions = minions[1:]
+      host, port = minion
 
-      con=rpyc.connect(host,port=port)
+      con = rpyc.connect(host, port = port)
       minion = con.root.Minion()
-      minion.put(block_uuid,data,minions)
+      minion.put(block_uuid,  data, minions)
 
-    def delete_block(self,uuid):
-      pass
+    def exposed_delete_block(self,uuid):
+        block_addr = DATA_DIR + str(uuid)
+        os.remove(block_addr)
       
 def parse_command_line_arguments():         # parse command arguments
     if len(sys.argv) == 2:                  # especially ip, port of the server and file name to transfer
