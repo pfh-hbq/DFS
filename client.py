@@ -24,25 +24,28 @@ def read_from_minion(block_uuid,minion):
   return minion.get(block_uuid)
 
 def get(master, fname):
-  name, extension = fname.split('.')
+    name, extension = fname.split('.')
   
-  file_table = master.get_file_table_entry(fname)
-  if not file_table:
-    LOG.info("404: file not found")
-    return
+    file_table = master.get_file_table_entry(fname)
+    if not file_table:
+        LOG.info("404: file not found")
+        return
 
-  new_filename = get_new_filename(name, extension)
-  f = open(new_filename, "wb")
+    if not os.path.exists(os.path.dirname(fname)):
+        os.makedirs(os.path.dirname(fname))
+        
+    new_filename = get_new_filename(name, extension)
+    f = open(new_filename, "wb")
   
-  for block in file_table:
-    for m in [master.get_minions()[_] for _ in block[1]]:
-      data = read_from_minion(block[0], m)
-      if data:
-        f.write(data)
-        break
-    else:
-        LOG.info("No blocks found. Possibly a corrupt file")
-  f.close()
+    for block in file_table:
+        for m in [master.get_minions()[_] for _ in block[1]]:
+            data = read_from_minion(block[0], m)
+            if data:
+                f.write(data)
+                break
+            else:
+                LOG.info("No blocks found. Possibly a corrupt file")
+    f.close()
   
 #  Change file name/move file
 
@@ -70,16 +73,6 @@ def get_new_filename(name, extension):
         f = open(name + "." + extension, "w+")
         f.close()
         return name + "." + extension
-    
-#def put(master, source, dest):
-#  size = os.path.getsize(source)
-#  blocks = master.write(dest,size)
-#  with open(source, 'rb') as f:
-#    for b in blocks:
-#      data = f.read(master.get_block_size())
-#      block_uuid=b[0]
-#      minions = [master.get_minions()[_] for _ in b[1]]
-#      send_to_minion(block_uuid,data,minions)
 
 def put(master, source):
     size = os.path.getsize(source)
@@ -91,22 +84,29 @@ def put(master, source):
         minions = [master.get_minions()[_] for _ in b[1]]
         send_to_minion(block_uuid,data,minions)
 
-def main(args):
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def main():
     con=rpyc.connect("localhost",port=2131)
     master=con.root.Master()
   
-    if args[0] == "get":
-        get(master,args[1])
-    elif args[0] == "put":
-#        put(master,args[1],args[2])
-        put(master,args[1])
-    elif args[0] == "rename" or args[0] == "move":
-        rename_move(master, args[1], args[2])
-    elif args[0] == "delete":
-        delete_file(master, args[1])
-    else:
-        LOG.error("try 'put srcFile destFile OR get file'")
+    while True:
+        args = input().split()
+        
+        if args[0] == "get":
+            get(master,args[1])
+        elif args[0] == "put":
+            put(master,args[1])
+        elif args[0] == "rename" or args[0] == "move":
+            rename_move(master, args[1], args[2])
+        elif args[0] == "delete":
+            delete_file(master, args[1])
+        elif args[0] == "clear":
+            clear()
+        else:
+            LOG.error("try 'put srcFile destFile OR get file'")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
