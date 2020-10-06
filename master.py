@@ -106,12 +106,15 @@ class MasterService(rpyc.Service):
     def exposed_list(self, source):
         return self.get_subdir(source)
     
+#   get all 1 level subdirectories / files of the source directory
+
     def get_subdir(master, source):
         table = master.__class__.file_table
         
         sub_dirs = set()
         
         for key in table.keys():
+#            sub_dirs.add("Key: {} Dir: {}".format(key, source))
             if key.startswith(source):
                 sub_dir = key.split(source)[1]
                 file = sub_dir.split("/")[1]
@@ -122,6 +125,40 @@ class MasterService(rpyc.Service):
                 sub_dirs.add(sub_dir)
         
         return sub_dirs
+    
+#   get stats about file: size, nodes
+
+    def exposed_file_info(self, fname):
+        file_table = self.exposed_get_file_table_entry(fname)
+        if not file_table:
+            LOG.info("404: file not found")
+            return
+        
+        size = 0
+        nodes = set()
+        
+        for block in file_table:
+            for m in [self.exposed_get_minions()[_] for _ in block[1]]:
+                data = self.read_from_minion(block[0], m)
+                host, port = m
+                nodes.add("{} : {}".format(host, port))
+                if data:
+                    size += sys.getsizeof(data)
+                    break
+                else:
+                    LOG.info("No blocks found. Possibly a corrupt file")
+          
+        size_in_mb = round(size / 1024 / 1024, 2)
+        
+        info = "File size: {} MB\n".format(size_in_mb) + "\nNodes adresses:\n" + "\n".join(nodes)
+        
+        return info
+        
+    def read_from_minion(master, block_uuid, minion):
+        host,port = minion
+        con=rpyc.connect(host,port=port)
+        minion = con.root.Minion()
+        return minion.get(block_uuid)
 
 if __name__ == "__main__":
     set_conf()

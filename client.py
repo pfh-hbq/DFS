@@ -33,7 +33,7 @@ def get(master, fname):
         LOG.info("404: file not found")
         return
 
-    if not os.path.exists(os.path.dirname(fname)):
+    if not os.path.exists(os.path.dirname(fname)) and "/" in fname:
         os.makedirs(os.path.dirname(fname))
         
     new_filename = get_new_filename(name, extension)
@@ -85,6 +85,11 @@ def put(master, source):
         block_uuid=b[0]
         minions = [master.get_minions()[_] for _ in b[1]]
         send_to_minion(block_uuid,data,minions)
+        
+def file_info(master, fname):
+  file_info = master.file_info(fname)
+  print(file_info)
+
 
 def list(master, source):
     for file in master.list(source):
@@ -107,6 +112,7 @@ def main():
   
     while True:
         try:
+            print(">> ", end="")
             args = input().split()
             
             if args[0] == "get":
@@ -121,6 +127,8 @@ def main():
                 list(master, CURRENT_DIR)
             elif args[0] == "cd":
                 change_dir(args[1])
+            elif args[0] == "info":
+                file_info(master, args[1])
             elif args[0] == "clear":
                 clear()
             else:
