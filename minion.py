@@ -11,22 +11,20 @@ class MinionService(rpyc.Service):
   class exposed_Minion():
     blocks = {}
 
-    def exposed_put(self,block_uuid,data,minions):
-      with open(DATA_DIR+str(block_uuid),'wb') as f:
+    def exposed_put(self, block_uuid, data, minions):
+      with open(DATA_DIR + str(block_uuid),'wb') as f:
         f.write(data)
         print("Save file")
-      if len(minions)>0:
-        self.forward(block_uuid,data,minions)
+      if len(minions) > 0:
+        self.forward(block_uuid, data, minions)
 
 
-    def exposed_get(self,block_uuid):
+    def exposed_get(self, block_uuid):
       print("\nsUID: " + str(block_uuid))
       block_addr=DATA_DIR+str(block_uuid)
       if not os.path.isfile(block_addr):
         print("No such file")
         return None
-        
-#        f = open(filename, 'rb')
 
       with open(block_addr, 'rb') as f:
         return f.read()   

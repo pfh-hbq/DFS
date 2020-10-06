@@ -12,8 +12,8 @@ import os
 from rpyc.utils.server import ThreadedServer
 
 def int_handler(signal, frame):
-  pickle.dump((MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping),open('fs.img','wb'))
-  sys.exit(0)
+    pickle.dump((MasterService.exposed_Master.file_table,MasterService.exposed_Master.block_mapping),open('fs.img','wb'))
+    sys.exit(0)
 
 def set_conf():
   conf=configparser.ConfigParser()
@@ -42,11 +42,8 @@ class MasterService(rpyc.Service):
         return mapping
       
     def exposed_change_filepath(self, old_path, new_path):
-#        dictionary[new_key] = dictionary.pop(old_key)
-        
         self.__class__.file_table[new_path] = self.__class__.file_table.pop(old_path)
-#        mapping =
-#        return mapping
+        
 
     def exposed_write(self, dest, size):
         if self.exists(dest):
@@ -97,7 +94,7 @@ class MasterService(rpyc.Service):
 
     def alloc_blocks(self, dest, num):
         blocks = []
-        for i in range(0,num):
+        for i in range(0, num):
             block_uuid = uuid.uuid1()
             nodes_ids = random.sample(self.__class__.minions.keys(),self.__class__.replication_factor)
             blocks.append((block_uuid,nodes_ids))
@@ -105,7 +102,26 @@ class MasterService(rpyc.Service):
             self.__class__.file_table[dest].append((block_uuid,nodes_ids))
 
         return blocks
-
+    
+    def exposed_list(self, source):
+        return self.get_subdir(source)
+    
+    def get_subdir(master, source):
+        table = master.__class__.file_table
+        
+        sub_dirs = set()
+        
+        for key in table.keys():
+            if key.startswith(source):
+                sub_dir = key.split(source)[1]
+                file = sub_dir.split("/")[1]
+                
+                sub_dirs.add(file)
+            elif "./" == source:
+                sub_dir = key.split("/")[0]
+                sub_dirs.add(sub_dir)
+        
+        return sub_dirs
 
 if __name__ == "__main__":
     set_conf()

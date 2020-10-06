@@ -3,6 +3,8 @@ import sys
 import os
 import logging
 
+CURRENT_DIR = "./"
+
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
@@ -84,28 +86,47 @@ def put(master, source):
         minions = [master.get_minions()[_] for _ in b[1]]
         send_to_minion(block_uuid,data,minions)
 
+def list(master, source):
+    for file in master.list(source):
+        print(file)
+    
+def change_dir(new_dir):
+    global CURRENT_DIR
+    
+    if new_dir == "~":
+        CURRENT_DIR = "./"
+    else:
+        CURRENT_DIR = str(new_dir)
+
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def main():
-    con=rpyc.connect("localhost",port=2131)
+    con = rpyc.connect("localhost", port = 2131)
     master=con.root.Master()
   
     while True:
-        args = input().split()
-        
-        if args[0] == "get":
-            get(master,args[1])
-        elif args[0] == "put":
-            put(master,args[1])
-        elif args[0] == "rename" or args[0] == "move":
-            rename_move(master, args[1], args[2])
-        elif args[0] == "delete":
-            delete_file(master, args[1])
-        elif args[0] == "clear":
-            clear()
-        else:
-            LOG.error("try 'put srcFile destFile OR get file'")
+        try:
+            args = input().split()
+            
+            if args[0] == "get":
+                get(master,args[1])
+            elif args[0] == "put":
+                put(master,args[1])
+            elif args[0] == "rename" or args[0] == "move":
+                rename_move(master, args[1], args[2])
+            elif args[0] == "delete":
+                delete_file(master, args[1])
+            elif args[0] == "ls":
+                list(master, CURRENT_DIR)
+            elif args[0] == "cd":
+                change_dir(args[1])
+            elif args[0] == "clear":
+                clear()
+            else:
+                raise NameError("Unknown command")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
