@@ -10,7 +10,6 @@ Matvey Plevako
 
 #### 07.10.2020
 
-
 ## Introduction
 
 The Distributed File System (DFS) is a file system with data stored on a server. The data is accessed and processed as if it was stored on the local client machine.  The DFS makes it convenient to share information and files among users on a network. We have implemented a simple Distributed File System (DFS). Files are hosted remotely on storage servers. A single naming server indexes the files, indicating which one is stored where. When a client wishes to access a file, it first contacts the naming server to obtain information about the storage server hosting it. After that, it communicates directly with the storage server to complete the operation.
@@ -22,6 +21,7 @@ We have chosen Python language for Distributed File System implementation.
 ## Hot to install. Server.
 
 Run `python3 master.py` on your server machine, to run Name Server
+
 Run `python3 minion.py port_number` on your server machine, to run Storage Server
 
 ## Hot to install. Client.
@@ -44,4 +44,3 @@ We have implemented such client commands in our Distributed File System:
 - `ls` - returns list of files, which are stored in the directory
 - `mkdir directory_name` - creates a new directory
 - `rm directory_path` - deletes directory, if the directory contains files asks for confirmation from the user before deletion
-
