@@ -31,7 +31,7 @@ Run `python3 client.py` on your client machine, then proceed to the commands (se
 ## Hot to use. Client.
 
 We have implemented such client commands in our Distributed File System:
-- Initialize - initializes the client storage on a new system, removes any existing file in the dfs root directory and returns available size
+- `init` - initializes the client storage on a new system, removes any existing file in the dfs root directory and returns available size
 - `create file_name` - creates a new empty file
 - `get file_path` - downloads a file from the DFS to the Client side
 - `put local_file_path` - uploads a file from the Client side to the DFS
